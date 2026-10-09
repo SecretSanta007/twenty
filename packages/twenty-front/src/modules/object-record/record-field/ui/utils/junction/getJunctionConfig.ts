@@ -1,5 +1,5 @@
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
-import { doesFieldMetadataItemMatchFieldMetadataId } from '@/object-metadata/utils/doesFieldMetadataItemMatchFieldMetadataId';
+import { findFieldMetadataItemByFieldMetadataId } from '@/object-metadata/utils/findFieldMetadataItemByFieldMetadataId';
 import { type JunctionConfig } from '@/object-record/record-field/ui/utils/junction/types/JunctionConfig';
 import { type JunctionObjectMetadataItem } from '@/object-record/record-field/ui/utils/junction/types/JunctionObjectMetadataItem';
 import { FieldMetadataType } from 'twenty-shared/types';
@@ -29,14 +29,6 @@ export const getJunctionConfig = ({
   if (!isDefined(junctionObjectMetadata)) {
     return null;
   }
-
-  const findFieldById = (fieldMetadataId: string) =>
-    junctionObjectMetadata.fields.find((fieldMetadataItem) =>
-      doesFieldMetadataItemMatchFieldMetadataId({
-        fieldMetadataItem,
-        fieldMetadataId,
-      }),
-    );
 
   const findSourceField = (
     excludeFieldId?: string,
@@ -69,10 +61,16 @@ export const getJunctionConfig = ({
 
   const hasConfiguredTargetField = hasJunctionTargetFieldId(settings);
   const configuredTargetField = hasConfiguredTargetField
-    ? findFieldById(settings.junctionTargetFieldId)
+    ? findFieldMetadataItemByFieldMetadataId({
+        fieldMetadataItems: junctionObjectMetadata.fields,
+        fieldMetadataId: settings.junctionTargetFieldId,
+      })
     : undefined;
   const relationSourceField = isDefined(relationTargetFieldMetadataId)
-    ? findFieldById(relationTargetFieldMetadataId)
+    ? findFieldMetadataItemByFieldMetadataId({
+        fieldMetadataItems: junctionObjectMetadata.fields,
+        fieldMetadataId: relationTargetFieldMetadataId,
+      })
     : undefined;
   const sourceField =
     relationSourceField ?? findSourceField(configuredTargetField?.id);
@@ -83,8 +81,7 @@ export const getJunctionConfig = ({
     isValid: false,
   };
 
-  // Legacy workspaces can lack the target marker. Only infer a pure junction:
-  // an unlabeled intermediate record with exactly one morph target.
+  // Legacy workspaces can lack the target marker; only infer a pure junction (unlabeled, one morph target).
   const inferredMorphTargetFields = hasConfiguredTargetField
     ? []
     : junctionObjectMetadata.fields.filter(

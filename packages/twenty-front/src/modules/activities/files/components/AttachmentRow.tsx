@@ -10,20 +10,21 @@ import {
 import { getFileCategoryFromExtension } from '@/object-record/record-field/ui/utils/getFileCategoryFromExtension';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { styled } from '@linaria/react';
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { getSafeUrl, isDefined } from 'twenty-shared/utils';
 
 import { type AttachmentWithFile } from '@/activities/files/utils/filterAttachmentsWithFile';
 import { FileIcon } from '@/file/components/FileIcon';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
+import { isNavigationModifierPressed } from '@/ui/navigation/utils/isNavigationModifierPressed';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import { IconCalendar } from 'twenty-ui/icon';
-import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
-import { isNavigationModifierPressed } from 'twenty-ui/utilities';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { formatToHumanReadableDate } from '~/utils/date-utils';
 import { getFileNameAndExtension } from '~/utils/file/getFileNameAndExtension';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
 
 const StyledLeftContent = styled.div`
   align-items: center;
@@ -39,6 +40,8 @@ const StyledRightContent = styled.div`
   align-items: center;
   display: flex;
   gap: ${themeCssVariables.spacing['0.5']};
+  position: relative;
+  z-index: 1;
 `;
 
 const StyledCalendarIconContainer = styled.div`
@@ -58,9 +61,11 @@ const StyledLink = styled.a`
   font-family: inherit;
   font-size: inherit;
   padding: 0;
+  position: relative;
   text-align: left;
   text-decoration: none;
   width: 100%;
+  z-index: 1;
 
   :hover {
     color: ${themeCssVariables.font.color.secondary};
@@ -73,7 +78,9 @@ const StyledLinkContainer = styled.div`
 `;
 
 const StyledTextInputContainer = styled.div`
+  position: relative;
   width: 100%;
+  z-index: 1;
 `;
 
 type AttachmentRowProps = {
@@ -85,7 +92,7 @@ export const AttachmentRow = ({
   attachment,
   onPreview,
 }: AttachmentRowProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const [isEditing, setIsEditing] = useState(false);
 
   const hasDownloadPermission = useHasPermissionFlag(
@@ -168,7 +175,7 @@ export const AttachmentRow = ({
       return;
     }
 
-    window.open(safeFileUrl, '_blank', 'noopener,noreferrer');
+    openUrlInNewTab(safeFileUrl);
   };
 
   const handleFileLinkClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -193,7 +200,11 @@ export const AttachmentRow = ({
         } as GenericFieldContextType
       }
     >
-      <ActivityRow onClick={handleRowClick} disabled={isEditing}>
+      <ActivityRow
+        onClick={handleRowClick}
+        disabled={isEditing}
+        label={`${attachmentFileName}${attachmentFileExtension}`}
+      >
         <StyledLeftContent>
           <FileIcon fileCategory={fileCategory} thumbnailUrl={fileUrl} />
           {isEditing ? (

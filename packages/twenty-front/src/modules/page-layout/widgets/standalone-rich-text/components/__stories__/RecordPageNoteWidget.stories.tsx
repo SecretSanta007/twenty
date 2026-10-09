@@ -1,7 +1,3 @@
-import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainContextStoreInstanceId';
-import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
-import { contextStoreTargetedRecordsRuleComponentState } from '@/context-store/states/contextStoreTargetedRecordsRuleComponentState';
-import { ContextStoreComponentInstanceContext } from '@/context-store/states/contexts/ContextStoreComponentInstanceContext';
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { metadataStoreState } from '@/metadata-store/states/metadataStoreState';
 import { PageLayoutContentProvider } from '@/page-layout/contexts/PageLayoutContentContext';
@@ -9,7 +5,6 @@ import {
   PAGE_LAYOUT_TEST_INSTANCE_ID,
   PageLayoutTestWrapper,
 } from '@/page-layout/hooks/__tests__/PageLayoutTestWrapper';
-import { useOpenWidgetSettingsInSidePanel } from '@/side-panel/hooks/useOpenWidgetSettingsInSidePanel';
 import { isDashboardInEditModeComponentState } from '@/page-layout/states/isDashboardInEditModeComponentState';
 import { pageLayoutDraftComponentState } from '@/page-layout/states/pageLayoutDraftComponentState';
 import { pageLayoutEditingWidgetIdComponentState } from '@/page-layout/states/pageLayoutEditingWidgetIdComponentState';
@@ -23,13 +18,15 @@ import {
 import { createDefaultStandaloneRichTextWidget } from '@/page-layout/utils/createDefaultStandaloneRichTextWidget';
 import { RecordPageAddWidgetSection } from '@/page-layout/widgets/components/RecordPageAddWidgetSection';
 import { WidgetCardShell } from '@/page-layout/widgets/components/WidgetCardShell';
+import { useOpenWidgetSettingsInSidePanel } from '@/side-panel/hooks/useOpenWidgetSettingsInSidePanel';
+import { PageLayoutSidePanelTargetProvider } from '@/side-panel/pages/page-layout/components/PageLayoutSidePanelTargetProvider';
 import { SidePanelPageLayoutRecordPageWidgetTypeSelect } from '@/side-panel/pages/page-layout/components/SidePanelPageLayoutRecordPageWidgetTypeSelect';
 import { isSidePanelOpenedState } from '@/side-panel/states/isSidePanelOpenedState';
-import { sidePanelPageState } from '@/side-panel/states/sidePanelPageState';
+import { sidePanelPageInfoSelector } from '@/side-panel/states/sidePanelPageInfoSelector';
 import { LayoutRenderingProvider } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
-import { graphql, HttpResponse } from 'msw';
+import { HttpResponse, graphql } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { SidePanelPages } from 'twenty-shared/types';
@@ -39,7 +36,7 @@ import {
   PageLayoutType,
   WidgetType,
 } from '~/generated-metadata/graphql';
-import { SnackBarDecorator } from '~/testing/decorators/SnackBarDecorator';
+import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
 import { getMockObjectMetadataItemOrThrow } from '~/testing/utils/getMockObjectMetadataItemOrThrow';
 import { getTestEnrichedObjectMetadataItemsMock } from '~/testing/utils/getTestEnrichedObjectMetadataItemsMock';
 import { setTestObjectMetadataItemsInMetadataStore } from '~/testing/utils/setTestObjectMetadataItemsInMetadataStore';
@@ -59,6 +56,10 @@ const NOTE_WIDGET = createDefaultStandaloneRichTextWidget({
 const DRAFT_ATOM = pageLayoutDraftComponentState.atomFamily({
   instanceId: PAGE_LAYOUT_TEST_INSTANCE_ID,
 });
+const TARGET_RECORD_IDENTIFIER = {
+  id: 'company-record',
+  targetObjectNameSingular: 'company',
+};
 const EDITING_WIDGET_ATOM = pageLayoutEditingWidgetIdComponentState.atomFamily({
   instanceId: PAGE_LAYOUT_TEST_INSTANCE_ID,
 });
@@ -186,36 +187,21 @@ const meta: Meta<typeof RecordPageNoteWidgetStory> = {
       }),
       'tab-1',
     );
-    jotaiStore.set(
-      contextStoreCurrentObjectMetadataItemIdComponentState.atomFamily({
-        instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID,
-      }),
-      company.id,
-    );
-    jotaiStore.set(
-      contextStoreTargetedRecordsRuleComponentState.atomFamily({
-        instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID,
-      }),
-      { mode: 'selection', selectedRecordIds: ['company-record'] },
-    );
   },
   decorators: [
-    SnackBarDecorator,
+    ToastDecorator,
     (Story, { args }) => (
       <MemoryRouter>
         <PageLayoutTestWrapper store={jotaiStore} layoutType={args.layoutType}>
           <LayoutRenderingProvider
             value={{
-              isInSidePanel: false,
               layoutType: args.layoutType,
-              targetRecordIdentifier: {
-                id: 'company-record',
-                targetObjectNameSingular: 'company',
-              },
+              targetRecordIdentifier: TARGET_RECORD_IDENTIFIER,
             }}
           >
-            <ContextStoreComponentInstanceContext.Provider
-              value={{ instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID }}
+            <PageLayoutSidePanelTargetProvider
+              pageLayoutId={PAGE_LAYOUT_TEST_INSTANCE_ID}
+              targetRecordIdentifier={TARGET_RECORD_IDENTIFIER}
             >
               <PageLayoutContentProvider
                 value={{
@@ -228,7 +214,7 @@ const meta: Meta<typeof RecordPageNoteWidgetStory> = {
                   <Story />
                 </div>
               </PageLayoutContentProvider>
-            </ContextStoreComponentInstanceContext.Provider>
+            </PageLayoutSidePanelTargetProvider>
           </LayoutRenderingProvider>
         </PageLayoutTestWrapper>
       </MemoryRouter>
@@ -265,7 +251,7 @@ export const SelectAndFormatText: Story = {
     await expect(jotaiStore.get(EDITING_WIDGET_ATOM)).toBe('other-widget');
     await userEvent.click(bold);
     await waitFor(() =>
-      expect(canvas.getByText('instructions').closest('strong')).not.toBeNull(),
+      expect(canvas.getByText(/instructions/).closest('strong')).not.toBeNull(),
     );
     await expect(jotaiStore.get(isSidePanelOpenedState.atom)).toBe(false);
     await expect(await canvas.findByRole('textbox')).toBe(editor);
@@ -333,7 +319,7 @@ export const AddFromInlinePicker: Story = {
     const note = jotaiStore.get(DRAFT_ATOM).tabs[0].widgets[0];
     await expect(note.title).toBe('Note');
     await expect(jotaiStore.get(EDITING_WIDGET_ATOM)).toBe(note.id);
-    await expect(jotaiStore.get(sidePanelPageState.atom)).toBe(
+    await expect(jotaiStore.get(sidePanelPageInfoSelector.atom).page).toBe(
       SidePanelPages.PageLayoutWidgetSettings,
     );
   },
@@ -384,7 +370,7 @@ export const MoreWidgets: Story = {
     );
     await expect(jotaiStore.get(DRAFT_ATOM).tabs[0].widgets).toHaveLength(0);
     await expect(jotaiStore.get(isSidePanelOpenedState.atom)).toBe(true);
-    await expect(jotaiStore.get(sidePanelPageState.atom)).toBe(
+    await expect(jotaiStore.get(sidePanelPageInfoSelector.atom).page).toBe(
       SidePanelPages.PageLayoutRecordPageWidgetTypeSelect,
     );
   },

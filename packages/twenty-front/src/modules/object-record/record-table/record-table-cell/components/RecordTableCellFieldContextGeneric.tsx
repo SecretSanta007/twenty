@@ -1,4 +1,3 @@
-import { useGetIsMetadataItemFromStandardApplication } from '@/object-metadata/hooks/useGetIsMetadataItemFromStandardApplication';
 import { getObjectPermissionsForObject } from '@/object-metadata/utils/getObjectPermissionsForObject';
 import { isLabelIdentifierField } from '@/object-metadata/utils/isLabelIdentifierField';
 import { isRecordFieldReadOnly } from '@/object-record/read-only/utils/isRecordFieldReadOnly';
@@ -37,15 +36,20 @@ export const RecordTableCellFieldContextGeneric = ({
 
   const {
     objectPermissionsByObjectMetadataId,
+    fieldMetadataItemByFieldMetadataItemId,
     fieldDefinitionByFieldMetadataItemId,
   } = useRecordIndexContextOrThrow();
 
   const fieldDefinition =
     fieldDefinitionByFieldMetadataItemId[recordField.fieldMetadataItemId];
+  const fieldMetadataItem =
+    fieldMetadataItemByFieldMetadataItemId[recordField.fieldMetadataItemId];
 
   const updateRecord = useContext(RecordTableUpdateContext);
-  const getIsMetadataItemFromStandardApplication =
-    useGetIsMetadataItemFromStandardApplication();
+
+  if (!isDefined(fieldMetadataItem)) {
+    return null;
+  }
 
   let hasObjectReadPermissions = objectPermissions.canReadObjectRecords;
   let isInvalidJunctionRelation = false;
@@ -119,16 +123,8 @@ export const RecordTableCellFieldContextGeneric = ({
           isInvalidJunctionRelation ||
           isRecordFieldReadOnly({
             isRecordReadOnly: isRecordReadOnly ?? false,
-            isSystemObject: objectMetadataItem.isSystem,
-            isFieldFromStandardApplication:
-              getIsMetadataItemFromStandardApplication({
-                applicationId: fieldDefinition.metadata.applicationId,
-              }),
-            objectPermissions,
-            fieldMetadataItem: {
-              id: fieldDefinition.fieldMetadataId,
-              isUIEditable: fieldDefinition.metadata.isUIEditable ?? true,
-            },
+            objectMetadataId: objectMetadataItem.id,
+            fieldMetadataItem,
             fieldDefinition,
             objectPermissionsByObjectMetadataId,
           }),

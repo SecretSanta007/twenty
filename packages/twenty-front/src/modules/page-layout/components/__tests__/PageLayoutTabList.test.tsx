@@ -4,6 +4,7 @@ import { pageLayoutTabSettingsOpenTabIdComponentState } from '@/page-layout/stat
 import { makeTab } from '@/page-layout/testing/pageLayoutDraftFixtures';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { type SingleTabProps } from '@/ui/layout/tab-list/types/SingleTabProps';
+import { WorkspaceSurfaceContext } from '@/ui/layout/contexts/WorkspaceSurfaceContext';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { render, screen } from '@testing-library/react';
@@ -25,6 +26,7 @@ let mockIsInEditMode = true;
 
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
+  useLocation: () => ({ search: '', state: null }),
   useNavigate: () => mockNavigate,
 }));
 
@@ -52,11 +54,8 @@ jest.mock('@/ui/layout/dropdown/hooks/useOpenDropdown', () => ({
   useOpenDropdown: () => ({ openDropdown: jest.fn() }),
 }));
 
-jest.mock('@/ui/utilities/pointer-event/hooks/useClickOutsideListener', () => ({
-  useClickOutsideListener: () => ({ toggleClickOutside: jest.fn() }),
-}));
-
-jest.mock('@/ui/utilities/responsive/hooks/useIsMobile', () => ({
+jest.mock('twenty-ui/utilities', () => ({
+  ...jest.requireActual('twenty-ui/utilities'),
   useIsMobile: () => false,
 }));
 
@@ -84,13 +83,6 @@ jest.mock('@/ui/utilities/dimensions/components/NodeDimension', () => ({
 jest.mock('@/ui/layout/tab-list/components/TabListHiddenMeasurements', () => ({
   TabListHiddenMeasurements: () => null,
 }));
-
-jest.mock(
-  '@/ui/layout/tab-list/components/TabListFromUrlOptionalEffect',
-  () => ({
-    TabListFromUrlOptionalEffect: () => null,
-  }),
-);
 
 jest.mock('@/page-layout/components/PageLayoutTabListVisibleTabs', () => ({
   PageLayoutTabListVisibleTabs: ({
@@ -173,18 +165,26 @@ const renderTabList = ({
   render(
     <Provider store={store}>
       <I18nProvider i18n={i18n}>
-        <PageLayoutComponentInstanceContext.Provider
-          value={{ instanceId: PAGE_LAYOUT_ID }}
+        <WorkspaceSurfaceContext.Provider
+          value={{
+            type: isInSidePanel ? 'side-panel' : 'main',
+            instanceId: isInSidePanel ? 'side-panel' : 'main',
+            ownsRouteLocation: !isInSidePanel,
+          }}
         >
-          <PageLayoutTabList
-            tabs={TABS}
-            componentInstanceId={TAB_LIST_ID}
-            pageLayoutType={pageLayoutType}
-            behaveAsLinks={behaveAsLinks}
-            isReorderEnabled
-            isInSidePanel={isInSidePanel}
-          />
-        </PageLayoutComponentInstanceContext.Provider>
+          <PageLayoutComponentInstanceContext.Provider
+            value={{ instanceId: PAGE_LAYOUT_ID }}
+          >
+            <PageLayoutTabList
+              aria-label="Record sections"
+              tabs={TABS}
+              componentInstanceId={TAB_LIST_ID}
+              pageLayoutType={pageLayoutType}
+              behaveAsLinks={behaveAsLinks}
+              isReorderEnabled
+            />
+          </PageLayoutComponentInstanceContext.Provider>
+        </WorkspaceSurfaceContext.Provider>
       </I18nProvider>
     </Provider>,
   );
@@ -210,14 +210,14 @@ describe('PageLayoutTabList selection', () => {
         'aria-pressed',
         'true',
       );
-      expect(mockNavigate).toHaveBeenCalledWith(`#${title}`);
+      expect(mockNavigate).not.toHaveBeenCalled();
       expect(mockOpenTabSettings).not.toHaveBeenCalled();
 
       await user.click(screen.getByRole('button', { name: title }));
 
       expect(mockOpenTabSettings).toHaveBeenCalledTimes(1);
       expect(mockOpenTabSettings).toHaveBeenCalledWith(title);
-      expect(mockNavigate).toHaveBeenCalledTimes(1);
+      expect(mockNavigate).not.toHaveBeenCalled();
     },
   );
 
@@ -265,8 +265,7 @@ describe('PageLayoutTabList selection', () => {
       .setup()
       .dblClick(screen.getByRole('button', { name: 'Notes' }));
 
-    expect(mockNavigate).toHaveBeenCalledTimes(1);
-    expect(mockNavigate).toHaveBeenCalledWith('#Notes');
+    expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockOpenTabSettings).toHaveBeenCalledTimes(1);
     expect(store.get(settingsTabAtom)).toBe('Notes');
   });
@@ -315,6 +314,10 @@ describe('PageLayoutTabList selection', () => {
 
       expect(mockOpenTabSettings).not.toHaveBeenCalled();
       expect(mockCloseSidePanelMenu).not.toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith(
+        { search: '', hash: `#${title}` },
+        { replace: false, state: null },
+      );
     },
   );
 
@@ -342,14 +345,14 @@ describe('PageLayoutTabList selection', () => {
       .setup()
       .click(screen.getByRole('button', { name: 'Files' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('#Files');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      { search: '', hash: '#Files' },
+      { replace: false, state: null },
+    );
     expect(screen.getByRole('button', { name: 'Tasks' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     expect(mockOpenTabSettings).not.toHaveBeenCalled();
-    expect(mockCloseDropdown).toHaveBeenCalledWith(
-      `tab-overflow-${TAB_LIST_ID}`,
-    );
   });
 });

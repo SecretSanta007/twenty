@@ -17,13 +17,15 @@ import { getTabLayoutMode } from '@/page-layout/utils/getTabLayoutMode';
 import { getTabListInstanceIdFromPageLayoutAndRecord } from '@/page-layout/utils/getTabListInstanceIdFromPageLayoutAndRecord';
 import { getTabPresentation } from '@/page-layout/utils/getTabPresentation';
 import { sortTabsByPosition } from '@/page-layout/utils/sortTabsByPosition';
+import { PageLayoutSidePanelTargetProvider } from '@/side-panel/pages/page-layout/components/PageLayoutSidePanelTargetProvider';
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
+import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
 import { TabListComponentInstanceContext } from '@/ui/layout/tab-list/states/contexts/TabListComponentInstanceContext';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
 import { isDefined } from 'twenty-shared/utils';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledRecordIdentifierBar = styled.div`
   align-items: center;
@@ -126,16 +128,21 @@ export const PageLayoutSingleTabRenderer = ({
 }: PageLayoutSingleTabRendererProps) => {
   const { targetRecordIdentifier, layoutType } = useLayoutRenderingContext();
 
-  const tabListInstanceId = getTabListInstanceIdFromPageLayoutAndRecord({
-    pageLayoutId,
-    layoutType,
-    targetRecordIdentifier,
-  });
+  const pageLayoutComponentInstanceId =
+    useWorkspaceSurfaceScopedComponentInstanceId(pageLayoutId);
+
+  const tabListInstanceId = useWorkspaceSurfaceScopedComponentInstanceId(
+    getTabListInstanceIdFromPageLayoutAndRecord({
+      pageLayoutId,
+      layoutType,
+      targetRecordIdentifier,
+    }),
+  );
 
   return (
     <PageLayoutComponentInstanceContext.Provider
       value={{
-        instanceId: pageLayoutId,
+        instanceId: pageLayoutComponentInstanceId,
       }}
     >
       <TabListComponentInstanceContext.Provider
@@ -143,15 +150,20 @@ export const PageLayoutSingleTabRenderer = ({
           instanceId: tabListInstanceId,
         }}
       >
-        <PageLayoutEditModeProvider
-          layoutType={layoutType}
-          pageLayoutId={pageLayoutId}
+        <PageLayoutSidePanelTargetProvider
+          pageLayoutId={pageLayoutComponentInstanceId}
+          targetRecordIdentifier={targetRecordIdentifier}
         >
-          <PageLayoutInitializationQueryEffect pageLayoutId={pageLayoutId} />
-          <PageLayoutRecordPageCustomizationSessionRegistrationEffect />
-          <RecordTableWidgetViewDraftsInitializationEffect />
-          <PageLayoutSingleTabRendererContent />
-        </PageLayoutEditModeProvider>
+          <PageLayoutEditModeProvider
+            layoutType={layoutType}
+            pageLayoutId={pageLayoutId}
+          >
+            <PageLayoutInitializationQueryEffect pageLayoutId={pageLayoutId} />
+            <PageLayoutRecordPageCustomizationSessionRegistrationEffect />
+            <RecordTableWidgetViewDraftsInitializationEffect />
+            <PageLayoutSingleTabRendererContent />
+          </PageLayoutEditModeProvider>
+        </PageLayoutSidePanelTargetProvider>
       </TabListComponentInstanceContext.Provider>
     </PageLayoutComponentInstanceContext.Provider>
   );

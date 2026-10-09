@@ -12,6 +12,7 @@ import {
   CheckUserExistsDocument,
   GetAuthTokensFromLoginTokenDocument,
   GetAuthTokensFromOtpDocument,
+  GetAuthTokensFromTwoFactorAuthenticationRecoveryCodeDocument,
   GetLoginTokenFromCredentialsDocument,
   GetWorkspaceCreationDefaultsDocument,
   SignInDocument,
@@ -32,19 +33,20 @@ import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { returnToPathState } from '@/auth/states/returnToPathState';
 import { clearSessionLocalStorageKeys } from '@/auth/utils/clearSessionLocalStorageKeys';
 import { broadcastSignOutToOtherTabs } from '@/auth/utils/crossTabSignOut';
+import { clearSessionGeneration } from '@/auth/utils/clearSessionGeneration';
 import { isValidReturnToPath } from '@/auth/utils/isValidReturnToPath';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 
-import { isAppEffectRedirectEnabledState } from '@/app/states/isAppEffectRedirectEnabledState';
+import { isAppEffectRedirectEnabledState } from '@/auth/states/isAppEffectRedirectEnabledState';
 import { loginTokenState } from '@/auth/states/loginTokenState';
 import {
   SignInUpStep,
   signInUpStepState,
 } from '@/auth/states/signInUpStepState';
 import { workspacePublicDataState } from '@/auth/states/workspacePublicDataState';
-import { type BillingCheckoutSession } from '@/auth/types/billingCheckoutSession.type';
+import { type BillingCheckoutSession } from '@/auth/types/BillingCheckoutSession';
 import {
   countAvailableWorkspaces,
   getFirstAvailableWorkspaces,
@@ -55,6 +57,7 @@ import { useLastAuthenticatedWorkspaceDomain } from '@/domain-manager/hooks/useL
 import { useOrigin } from '@/domain-manager/hooks/useOrigin';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { useRedirectToWorkspaceDomain } from '@/domain-manager/hooks/useRedirectToWorkspaceDomain';
+import { isChooseWorkspaceActionRequested } from '@/auth/utils/isChooseWorkspaceActionRequested';
 import { useLoadCurrentUser } from '@/users/hooks/useLoadCurrentUser';
 import { i18n } from '@lingui/core';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -102,6 +105,9 @@ export const useAuth = () => {
     VerifyEmailAndGetWorkspaceAgnosticTokenDocument,
   );
   const [getAuthTokensFromOtp] = useMutation(GetAuthTokensFromOtpDocument);
+  const [getAuthTokensFromTwoFactorAuthenticationRecoveryCode] = useMutation(
+    GetAuthTokensFromTwoFactorAuthenticationRecoveryCodeDocument,
+  );
   const [signOutMutation] = useMutation(SignOutDocument);
 
   const workspacePublicData = useAtomStateValue(workspacePublicDataState);
@@ -117,8 +123,7 @@ export const useAuth = () => {
   const navigate = useNavigate();
 
   const clearSession = useCallback(() => {
-    // The assign below is the only navigation: keep the redirect effect from
-    // racing it to the sign-in page once the session is cleared.
+    // The assign below is the only navigation: keep the redirect effect from racing it to the sign-in page.
     store.set(isAppEffectRedirectEnabledState.atom, false);
     sessionStorage.clear();
     store.set(isCookieAuthActiveState.atom, false);
@@ -126,6 +131,7 @@ export const useAuth = () => {
     store.set(currentWorkspaceState.atom, null);
     store.set(currentWorkspaceMemberState.atom, null);
     store.set(currentUserWorkspaceState.atom, null);
+    clearSessionGeneration();
     clearSessionLocalStorageKeys();
     setLastAuthenticateWorkspaceDomain(null);
     window.location.assign(AppPath.SignInUp);
@@ -139,9 +145,7 @@ export const useAuth = () => {
       const availableWorkspacesCount =
         countAvailableWorkspaces(availableWorkspaces);
 
-      // The in-app "Create Workspace" entry point redirects here with this
-      // signal so an existing user with workspaces lands on the creation form
-      // instead of the workspace selection step.
+      // Set by the in-app "Create Workspace" entry point to skip workspace selection.
       const wantsToCreateNewWorkspace =
         new URLSearchParams(window.location.search).get('action') ===
         'create-new-workspace';
@@ -154,7 +158,10 @@ export const useAuth = () => {
         return;
       }
 
-      if (availableWorkspacesCount === 1) {
+      if (
+        availableWorkspacesCount === 1 &&
+        !isChooseWorkspaceActionRequested()
+      ) {
         const targetWorkspace =
           getFirstAvailableWorkspaces(availableWorkspaces);
 
@@ -623,6 +630,51 @@ export const useAuth = () => {
     [getAuthTokensFromOtp, origin, handleLoadWorkspaceAfterAuthentication],
   );
 
+  const handleGetAuthTokensFromTwoFactorAuthenticationRecoveryCode =
+    useCallback(
+      async (
+        recoveryCode: string,
+        loginToken: string,
+        captchaToken?: string,
+      ) => {
+        const result =
+          await getAuthTokensFromTwoFactorAuthenticationRecoveryCode({
+            variables: {
+              captchaToken,
+              origin,
+              recoveryCode,
+              loginToken,
+            },
+          });
+
+        if (isDefined(result.error)) {
+          throw result.error;
+        }
+
+        const redemption =
+          result.data?.getAuthTokensFromTwoFactorAuthenticationRecoveryCode;
+
+        if (!isDefined(redemption)) {
+          throw new Error(
+            'No getAuthTokensFromTwoFactorAuthenticationRecoveryCode result',
+          );
+        }
+
+        if (isDefined(redemption.provisioningUri)) {
+          return { provisioningUri: redemption.provisioningUri };
+        }
+
+        await handleLoadWorkspaceAfterAuthentication();
+
+        return { provisioningUri: null };
+      },
+      [
+        getAuthTokensFromTwoFactorAuthenticationRecoveryCode,
+        origin,
+        handleLoadWorkspaceAfterAuthentication,
+      ],
+    );
+
   return {
     getLoginTokenFromCredentials: handleGetLoginTokenFromCredentials,
     verifyEmailAndGetWorkspaceAgnosticToken:
@@ -639,6 +691,8 @@ export const useAuth = () => {
     signInWithGoogle: handleGoogleLogin,
     signInWithMicrosoft: handleMicrosoftLogin,
     getAuthTokensFromOTP: handleGetAuthTokensFromOTP,
+    getAuthTokensFromTwoFactorAuthenticationRecoveryCode:
+      handleGetAuthTokensFromTwoFactorAuthenticationRecoveryCode,
     navigateAfterMultiWorkspaceSignInUp,
   };
 };

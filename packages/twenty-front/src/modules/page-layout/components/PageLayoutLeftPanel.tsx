@@ -6,11 +6,12 @@ import { usePageLayoutTabWithVisibleWidgetsOrThrow } from '@/page-layout/hooks/u
 import { getScrollWrapperInstanceIdFromPageLayoutAndRecord } from '@/page-layout/utils/getScrollWrapperInstanceIdFromPageLayoutAndRecord';
 import { getTabLayoutMode } from '@/page-layout/utils/getTabLayoutMode';
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
+import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
 import { ScrollWrapper } from '@/ui/utilities/scroll/components/ScrollWrapper';
 import { styled } from '@linaria/react';
 import { PageLayoutType } from '~/generated-metadata/graphql';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledContainer = styled.div`
   --record-card-background-color: ${themeCssVariables.background.secondary};
@@ -41,18 +42,18 @@ export const PageLayoutLeftPanel = ({
 }: PageLayoutLeftPanelProps) => {
   const { currentPageLayout } = useCurrentPageLayout();
   const targetRecordIdentifier = useTargetRecord();
-  const { isInSidePanel, layoutType } = useLayoutRenderingContext();
+  const { layoutType } = useLayoutRenderingContext();
   const pinnedTab = usePageLayoutTabWithVisibleWidgetsOrThrow(pinnedLeftTabId);
 
-  const scrollWrapperInstanceId =
+  const scrollWrapperInstanceId = useWorkspaceSurfaceScopedComponentInstanceId(
     getScrollWrapperInstanceIdFromPageLayoutAndRecord({
       pageLayoutId,
       layoutType,
       targetRecordIdentifier,
-      isInSidePanel,
       scrollWrapperArea: 'left-panel',
       pageLayoutTabId: pinnedLeftTabId,
-    });
+    }),
+  );
   if (currentPageLayout?.type !== PageLayoutType.RECORD_PAGE) {
     return null;
   }

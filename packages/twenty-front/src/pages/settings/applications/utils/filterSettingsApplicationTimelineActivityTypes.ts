@@ -1,7 +1,7 @@
 import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
-import { type SettingsApplicationTimelineActivityType } from '~/pages/settings/applications/types/settingsApplicationTimelineActivityType';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { type SettingsApplicationTimelineActivityType } from '~/pages/settings/applications/types/SettingsApplicationTimelineActivityType';
+import { normalizeSearchText } from 'twenty-ui/utilities';
 
 export const filterSettingsApplicationTimelineActivityTypes = ({
   timelineActivityTypes,

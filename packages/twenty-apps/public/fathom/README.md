@@ -1,34 +1,29 @@
-# My Twenty App
+# Fathom
 
-Describe your app in one or two sentences.
+**Every Fathom recording, transcript, and summary, right inside your CRM.**
 
-## Features
+## ✨ What you get
 
-List the top things your app does, for example:
+- **Fathom transcripts, summaries, and action items saved when available**
+- **Recording video, or audio for audio-only calls, on the same record**
+- **Saved to a Call Recording, with calendar links for clear matches**
+- **New meetings synced as they happen**
+- **Your last 31 days imported the moment you connect**
+- **Built for AI & automation**
 
-- Feature one
-- Feature two
-- Feature three
+## 💳 Billing
 
-## Getting started
+**Free to run**: no per-seat, per-recording or per-import charge. AI actions use
+AI credits based on the model's token usage.
 
-Setup instructions live in [SETUP.md](SETUP.md).
+## 📌 Heads up
 
-## Publishing
-
-The `Publish` workflow (`.github/workflows/publish.yml`) publishes the app to npm with provenance using [npm trusted publishing](https://docs.npmjs.com/trusted-publishers). To publish:
-
-1. On npmjs.com register this repository as a trusted publisher of your package, pointing at the `publish.yml` workflow.
-2. Bump the version in `package.json`, then push a version tag (e.g. `git tag v1.0.0 && git push --tags`) or run the workflow manually from the Actions tab.
-
-Publishing with provenance is also how you prove ownership when claiming your app in a Twenty marketplace.
-
-## Changelog
-
-Notable changes are documented in [CHANGELOG.md](CHANGELOG.md).
-
-## Learn more
-
-- [Twenty Apps documentation](https://docs.twenty.com/developers/extend/apps/getting-started/quick-start)
-- [twenty-sdk CLI reference](https://www.npmjs.com/package/twenty-sdk)
-- [Discord](https://discord.gg/cx5n4Jzs57)
+- **Everything you import is shared with your workspace.** Transcripts,
+  summaries, and media land on Call Recording records that every member with
+  access can read. Private syncing is coming later.
+- **Media arrives after the transcript, and not always.** A recording stays in
+  Processing while Fathom prepares the download. Anything over 500 MB, and
+  view-only shares, never get media.
+- **Calendar links need one clear match.** A Call Recording is linked to a
+  calendar event only when its meeting link and scheduled time point to exactly
+  one event.

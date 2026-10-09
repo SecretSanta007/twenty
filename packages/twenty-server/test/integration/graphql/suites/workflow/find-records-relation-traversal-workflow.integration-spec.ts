@@ -2,14 +2,15 @@ import gql from 'graphql-tag';
 import request from 'supertest';
 import { createManyOperationFactory } from 'test/integration/graphql/utils/create-many-operation-factory.util';
 import { deleteManyOperationFactory } from 'test/integration/graphql/utils/delete-many-operation-factory.util';
-import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { updateWorkflowVersionTrigger } from 'test/integration/graphql/suites/workflow/utils/update-workflow-version-trigger.util';
 import {
   destroyWorkflowRun,
   runWorkflowVersion,
   waitForWorkflowCompletion,
 } from 'test/integration/graphql/suites/workflow/utils/workflow-run-test.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { isDefined } from 'twenty-shared/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 const client = request(`http://localhost:${APP_PORT}`);
@@ -35,7 +36,7 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
   let companyNameFieldMetadataId: string | null = null;
 
   const lookupFieldMetadataIds = async () => {
-    const objectsResponse = await makeMetadataAPIRequest({
+    const objectsResponse = await makeMetadataApiRequest({
       query: gql`
         query Objects($filter: ObjectFilter!, $paging: CursorPaging!) {
           objects(filter: $filter, paging: $paging) {
@@ -79,7 +80,7 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
   };
 
   const seedTestRecords = async () => {
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       createManyOperationFactory({
         objectMetadataSingularName: 'company',
         objectMetadataPluralName: 'companies',
@@ -92,7 +93,7 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
       }),
     );
 
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       createManyOperationFactory({
         objectMetadataSingularName: 'person',
         objectMetadataPluralName: 'people',
@@ -302,7 +303,7 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
           variables: { id: createdWorkflowId },
         });
     }
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       deleteManyOperationFactory({
         objectMetadataSingularName: 'person',
         objectMetadataPluralName: 'people',
@@ -310,7 +311,7 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
         filter: { id: { in: ALL_TEST_PERSON_IDS } },
       }),
     );
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       deleteManyOperationFactory({
         objectMetadataSingularName: 'company',
         objectMetadataPluralName: 'companies',
@@ -350,10 +351,23 @@ describe('FindRecords workflow action with relation-traversal filter (e2e)', () 
 
     const result = workflowRun?.state?.stepInfos?.[findRecordsStepId!]
       ?.result as
-      | { all?: Array<{ id: string }>; totalCount?: number | string }
+      | {
+          all?: Array<{ id: string; companyId: string | null }>;
+          totalCount?: number | string;
+        }
       | undefined;
 
-    expect(result?.all).toEqual([]);
-    expect(Number(result?.totalCount)).toBe(0);
+    const returnedRecords = result?.all;
+
+    expect(Array.isArray(returnedRecords)).toBe(true);
+    expect(Number.isFinite(Number(result?.totalCount))).toBe(true);
+
+    // An empty filter value can only match people with no company, and other
+    // specs sharing the database seed those, so assert the shape rather than []
+    const returnedCompanyIds = (returnedRecords ?? []).map(
+      (record) => record.companyId,
+    );
+
+    expect(returnedCompanyIds.filter(isDefined)).toEqual([]);
   });
 });

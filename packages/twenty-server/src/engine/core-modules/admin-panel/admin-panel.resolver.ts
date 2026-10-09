@@ -3,6 +3,7 @@ import { Args, Int, Mutation, Query } from '@nestjs/graphql';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import GraphQLJSON from 'graphql-type-json';
+import { AI_MODEL_TIERS } from 'twenty-shared/ai';
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 import { In, type Repository } from 'typeorm';
@@ -34,6 +35,7 @@ import { ServerAdminDTO } from 'src/engine/core-modules/admin-panel/dtos/server-
 import { SigningKeyDTO } from 'src/engine/core-modules/admin-panel/dtos/signing-key.dto';
 import { SigningKeysAdminPanelDTO } from 'src/engine/core-modules/admin-panel/dtos/signing-keys-admin-panel.dto';
 import { SystemHealthDTO } from 'src/engine/core-modules/admin-panel/dtos/system-health.dto';
+import { GenerateTwoFactorAuthenticationRecoveryCodeAsServerAdminInput } from 'src/engine/core-modules/admin-panel/dtos/generate-two-factor-authentication-recovery-code-as-server-admin.input';
 import { UpdateServerAdminAccessInput } from 'src/engine/core-modules/admin-panel/dtos/update-server-admin-access.input';
 import { UpdateWorkspaceFeatureFlagInput } from 'src/engine/core-modules/admin-panel/dtos/update-workspace-feature-flag.input';
 import { UserLookup } from 'src/engine/core-modules/admin-panel/dtos/user-lookup.dto';
@@ -43,7 +45,7 @@ import { AdminChatThreadScope } from 'src/engine/core-modules/admin-panel/enums/
 import { AdminChatThreadSortDirection } from 'src/engine/core-modules/admin-panel/enums/admin-chat-thread-sort-direction.enum';
 import { AdminChatThreadSortField } from 'src/engine/core-modules/admin-panel/enums/admin-chat-thread-sort-field.enum';
 import { HealthIndicatorId } from 'src/engine/core-modules/admin-panel/enums/health-indicator-id.enum';
-import { JobStateEnum } from 'src/engine/core-modules/admin-panel/enums/job-state.enum';
+import { JobStateEnum } from 'src/engine/core-modules/message-queue/enums/job-state.enum';
 import { QueueMetricsTimeRange } from 'src/engine/core-modules/admin-panel/enums/queue-metrics-time-range.enum';
 import { MaintenanceModeService } from 'src/engine/core-modules/admin-panel/maintenance-mode.service';
 import { AdminPanelBillingService } from 'src/engine/core-modules/admin-panel/services/admin-panel-billing.service';
@@ -63,11 +65,11 @@ import { ApplicationRegistrationEntity } from 'src/engine/core-modules/applicati
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
 import { AdminApplicationRegistrationClaimDTO } from 'src/engine/core-modules/application/application-registration/dtos/admin-application-registration-claim.dto';
+import { AdminUpdateApplicationRegistrationInput } from 'src/engine/core-modules/application/application-registration/dtos/admin-update-application-registration.input';
 import { ApplicationRegistrationInstalledWorkspacesDTO } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-installed-workspaces.dto';
 import { ApplicationRegistrationStatsDTO } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-stats.dto';
 import { FindApplicationRegistrationInstalledWorkspacesInput } from 'src/engine/core-modules/application/application-registration/dtos/find-application-registration-installed-workspaces.input';
 import { PaginatedApplicationRegistrationsDTO } from 'src/engine/core-modules/application/application-registration/dtos/paginated-application-registrations.dto';
-import { UpdateApplicationRegistrationInput } from 'src/engine/core-modules/application/application-registration/dtos/update-application-registration.input';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 import { type AuthContextUser } from 'src/engine/core-modules/auth/types/auth-context.type';
 import { AdminAiModelsDTO } from 'src/engine/core-modules/client-config/client-config.entity';
@@ -83,7 +85,10 @@ import { MessageQueueService } from 'src/engine/core-modules/message-queue/servi
 import { type ConfigVariables } from 'src/engine/core-modules/twenty-config/config-variables';
 import { ConfigVariableGraphqlApiExceptionFilter } from 'src/engine/core-modules/twenty-config/filters/config-variable-graphql-api-exception.filter';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { ThrottlerGraphqlApiExceptionFilter } from 'src/engine/core-modules/throttler/filters/throttler-graphql-api-exception.filter';
 import { TwoFactorAuthenticationExceptionFilter } from 'src/engine/core-modules/two-factor-authentication/two-factor-authentication-exception.filter';
+import { TwoFactorAuthenticationRecoveryCodeDTO } from 'src/engine/core-modules/two-factor-authentication/dto/two-factor-authentication-recovery-code.dto';
+import { TwoFactorAuthenticationRecoveryService } from 'src/engine/core-modules/two-factor-authentication/services/two-factor-authentication-recovery.service';
 import { UsageBreakdownItemDTO } from 'src/engine/core-modules/usage/dtos/usage-breakdown-item.dto';
 import { UsageAnalyticsService } from 'src/engine/core-modules/usage/services/usage-analytics.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
@@ -91,38 +96,47 @@ import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AdminPanelGuard } from 'src/engine/guards/admin-panel-guard';
 import { AdminPanelOrImpersonateGuard } from 'src/engine/guards/admin-panel-or-impersonate.guard';
-import { NoImpersonationGuard } from 'src/engine/guards/no-impersonation.guard';
+import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { ServerLevelImpersonateGuard } from 'src/engine/guards/server-level-impersonate.guard';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.const';
-import { AiModelPreferencesService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-preferences.service';
 import { AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
-import { AiModelRole } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-role.enum';
+import { AiModelTier } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-tier.enum';
 
 import { AdminPanelHealthServiceDataDTO } from './dtos/admin-panel-health-service-data.dto';
 import { MaintenanceModeDTO } from './dtos/maintenance-mode.dto';
 import { QueueMetricsDataDTO } from './dtos/queue-metrics-data.dto';
 import { SetMaintenanceModeInput } from './dtos/set-maintenance-mode.input';
+import { getAvailableEfforts } from 'src/engine/metadata-modules/ai/ai-models/utils/get-available-efforts.util';
 
 @UsePipes(ResolverValidationPipe)
 @AdminResolver()
 @UseFilters(
   AuthGraphqlApiExceptionFilter,
   TwoFactorAuthenticationExceptionFilter,
+  ThrottlerGraphqlApiExceptionFilter,
   PreventNestToAutoLogGraphqlErrorsFilter,
   ConfigVariableGraphqlApiExceptionFilter,
 )
 @UseGuards(
-  WorkspaceAuthGuard,
-  UserAuthGuard,
+  AuthPrincipalGuard({
+    userSession: {
+      standard: true,
+      impersonated: true,
+      playground: true,
+      workspaceAgnostic: false,
+    },
+    apiKey: false,
+    oauthClient: false,
+    application: false,
+  }),
   SettingsPermissionGuard(PermissionFlagType.SECURITY),
 )
 export class AdminPanelResolver {
   constructor(
     private readonly adminUserLookupService: AdminPanelUserLookupService,
     private readonly adminServerAdminService: AdminPanelServerAdminService,
+    private readonly twoFactorAuthenticationRecoveryService: TwoFactorAuthenticationRecoveryService,
     private readonly adminStatisticsService: AdminPanelStatisticsService,
     private readonly adminBillingService: AdminPanelBillingService,
     private readonly adminChatService: AdminPanelChatService,
@@ -138,7 +152,6 @@ export class AdminPanelResolver {
     private featureFlagService: FeatureFlagService,
     private readonly twentyConfigService: TwentyConfigService,
     private readonly aiModelRegistryService: AiModelRegistryService,
-    private readonly aiModelPreferencesService: AiModelPreferencesService,
     private readonly usageAnalyticsService: UsageAnalyticsService,
     private readonly maintenanceModeService: MaintenanceModeService,
     private readonly upgradeStatusService: UpgradeStatusService,
@@ -184,13 +197,39 @@ export class AdminPanelResolver {
     return this.adminStatisticsService.getTopWorkspaces(searchTerm);
   }
 
-  @UseGuards(AdminPanelGuard, NoImpersonationGuard)
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: false,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    }),
+    AdminPanelGuard,
+  )
   @Query(() => [ServerAdminDTO])
   async getServerAdmins(): Promise<ServerAdminDTO[]> {
     return this.adminServerAdminService.getServerAdmins();
   }
 
-  @UseGuards(AdminPanelGuard, NoImpersonationGuard)
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: false,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    }),
+    AdminPanelGuard,
+  )
   @Mutation(() => ServerAdminDTO)
   async updateServerAdminAccess(
     @Args() input: UpdateServerAdminAccessInput,
@@ -204,6 +243,36 @@ export class AdminPanelResolver {
       canAccessFullAdminPanel: input.canAccessFullAdminPanel,
       canImpersonate: input.canImpersonate,
       otp: input.otp,
+    });
+  }
+
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: false,
+        playground: false,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    }),
+    AdminPanelGuard,
+  )
+  @Mutation(() => TwoFactorAuthenticationRecoveryCodeDTO)
+  async generateTwoFactorAuthenticationRecoveryCodeAsServerAdmin(
+    @Args()
+    input: GenerateTwoFactorAuthenticationRecoveryCodeAsServerAdminInput,
+    @AuthUser() actor: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<TwoFactorAuthenticationRecoveryCodeDTO> {
+    return this.twoFactorAuthenticationRecoveryService.generateRecoveryCode({
+      actor,
+      actorWorkspaceId: workspace.id,
+      otp: input.otp,
+      targetUserId: input.userId,
+      targetWorkspaceId: input.workspaceId,
     });
   }
 
@@ -282,19 +351,18 @@ export class AdminPanelResolver {
     const resolvedProviders =
       this.aiModelRegistryService.getResolvedProvidersForAdmin();
 
-    const models = this.aiModelRegistryService
+    const providerLabelOf = (providerName: string | undefined) =>
+      isDefined(providerName)
+        ? (resolvedProviders[providerName]?.label ?? providerName)
+        : undefined;
+
+    const languageModels = this.aiModelRegistryService
       .getAllModelsWithStatus()
       .map(
-        ({
-          modelConfig,
-          isAvailable,
-          isAdminEnabled,
-          isRecommended,
-          providerName,
-          name,
-        }) => ({
+        ({ modelConfig, isAvailable, isAdminEnabled, providerName, name }) => ({
           modelId: modelConfig.modelId,
           label: modelConfig.label,
+          kind: 'language' as const,
           modelFamily: modelConfig.modelFamily,
           modelFamilyLabel: modelConfig.modelFamily
             ? MODEL_FAMILY_LABELS[modelConfig.modelFamily]
@@ -303,26 +371,46 @@ export class AdminPanelResolver {
           isAvailable,
           isAdminEnabled,
           isDeprecated: modelConfig.isDeprecated ?? false,
-          isRecommended,
           contextWindowTokens: modelConfig.contextWindowTokens,
           maxOutputTokens: modelConfig.maxOutputTokens,
           inputCostPerMillionTokens: modelConfig.inputCostPerMillionTokens,
           outputCostPerMillionTokens: modelConfig.outputCostPerMillionTokens,
           providerName,
-          providerLabel: providerName
-            ? (resolvedProviders[providerName]?.label ?? providerName)
-            : undefined,
+          providerLabel: providerLabelOf(providerName),
           name,
           dataResidency: modelConfig.dataResidency,
+          efforts: isDefined(modelConfig.effort)
+            ? undefined
+            : getAvailableEfforts(modelConfig),
         }),
       );
 
-    const prefs = this.aiModelPreferencesService.getPreferences();
+    const evaluationModels = this.aiModelRegistryService
+      .getAllEvaluationModelsWithStatus()
+      .map(({ modelConfig, isAvailable, isAdminEnabled }) => ({
+        modelId: modelConfig.modelId,
+        label: modelConfig.label,
+        kind: 'evaluation' as const,
+        sdkPackage: modelConfig.sdkPackage,
+        isAvailable,
+        isAdminEnabled,
+        isDeprecated: modelConfig.isDeprecated ?? false,
+        inputCostPerMillionTokens: modelConfig.inputCostPerMillionTokens,
+        outputCostPerMillionTokens: modelConfig.outputCostPerMillionTokens,
+        providerName: modelConfig.providerName,
+        providerLabel: providerLabelOf(modelConfig.providerName),
+        name: modelConfig.name,
+        dataResidency: modelConfig.dataResidency,
+      }));
 
     return {
-      models,
-      defaultSmartModelId: prefs.defaultSmartModels?.[0],
-      defaultFastModelId: prefs.defaultFastModels?.[0],
+      models: [...languageModels, ...evaluationModels],
+      // Not the chain head: it can start with a provider this instance holds no key for
+      defaultModelByTier: AI_MODEL_TIERS.map((tier) => ({
+        tier,
+        modelId:
+          this.aiModelRegistryService.findDefaultModelForTier(tier)?.modelId,
+      })),
     };
   }
 
@@ -350,36 +438,11 @@ export class AdminPanelResolver {
 
   @UseGuards(AdminPanelGuard)
   @Mutation(() => Boolean)
-  async setAdminAiModelRecommended(
-    @Args('modelId', { type: () => String }) modelId: string,
-    @Args('recommended', { type: () => Boolean }) recommended: boolean,
-  ): Promise<boolean> {
-    await this.aiModelRegistryService.setModelRecommended(modelId, recommended);
-
-    return true;
-  }
-
-  @UseGuards(AdminPanelGuard)
-  @Mutation(() => Boolean)
-  async setAdminAiModelsRecommended(
-    @Args('modelIds', { type: () => [String] }) modelIds: string[],
-    @Args('recommended', { type: () => Boolean }) recommended: boolean,
-  ): Promise<boolean> {
-    await this.aiModelRegistryService.setModelsRecommended(
-      modelIds,
-      recommended,
-    );
-
-    return true;
-  }
-
-  @UseGuards(AdminPanelGuard)
-  @Mutation(() => Boolean)
   async setAdminDefaultAiModel(
-    @Args('role', { type: () => AiModelRole }) role: AiModelRole,
+    @Args('tier', { type: () => AiModelTier }) tier: AiModelTier,
     @Args('modelId', { type: () => String }) modelId: string,
   ): Promise<boolean> {
-    await this.aiModelRegistryService.setDefaultModel(role, modelId);
+    await this.aiModelRegistryService.setDefaultModel(tier, modelId);
 
     return true;
   }
@@ -533,7 +596,7 @@ export class AdminPanelResolver {
   @UseGuards(AdminPanelGuard)
   @Mutation(() => ApplicationRegistrationEntity)
   async updateAdminApplicationRegistration(
-    @Args('input') input: UpdateApplicationRegistrationInput,
+    @Args('input') input: AdminUpdateApplicationRegistrationInput,
   ): Promise<ApplicationRegistrationEntity> {
     return this.applicationRegistrationService.updateGlobal(input);
   }
@@ -646,6 +709,7 @@ export class AdminPanelResolver {
       amount: input.amount,
       type: input.type,
       reason: input.reason,
+      expiresInDays: input.expiresInDays,
       clientOperationId: input.clientOperationId,
       grantedByUserId: actor.id,
     });

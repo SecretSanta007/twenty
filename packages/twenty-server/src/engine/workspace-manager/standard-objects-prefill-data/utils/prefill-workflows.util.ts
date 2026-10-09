@@ -5,6 +5,7 @@ import { type EntityManager } from 'typeorm';
 import { v5 } from 'uuid';
 
 import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { WorkflowEntity } from 'src/engine/core-modules/workflow/entities/workflow.entity';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
@@ -232,14 +233,7 @@ export const prefillWorkflows = async (
   await entityManager
     .createQueryBuilder()
     .insert()
-    .into('core.workflow', [
-      'id',
-      'workspaceId',
-      'universalIdentifier',
-      'applicationId',
-      'name',
-      'lastPublishedVersionId',
-    ])
+    .into(WorkflowEntity)
     .orIgnore()
     .values([
       {
@@ -249,6 +243,8 @@ export const prefillWorkflows = async (
         applicationId,
         name: 'Quick Lead',
         lastPublishedVersionId: quickLeadWorkflowVersionId,
+        workspaceWorkflowId: quickLeadWorkflowId,
+        lastPublishedCoreWorkflowVersionId: coreQuickLeadWorkflowVersionId,
       },
       {
         id: coreCreateCompanyWorkflowId,
@@ -257,6 +253,8 @@ export const prefillWorkflows = async (
         applicationId,
         name: 'Create company when adding a new person',
         lastPublishedVersionId: createCompanyWorkflowVersionId,
+        workspaceWorkflowId: createCompanyWorkflowId,
+        lastPublishedCoreWorkflowVersionId: coreCreateCompanyWorkflowVersionId,
       },
     ])
     .execute();
@@ -381,7 +379,7 @@ export const prefillWorkflows = async (
           },
         },
         errorHandlingOptions: {
-          retryOnFailure: { value: false },
+          retryOnFailure: { value: 0 },
           continueOnFailure: { value: false },
         },
       },
@@ -424,7 +422,7 @@ export const prefillWorkflows = async (
           }),
         },
         errorHandlingOptions: {
-          retryOnFailure: { value: false },
+          retryOnFailure: { value: 0 },
           continueOnFailure: { value: false },
         },
       },
@@ -448,6 +446,7 @@ export const prefillWorkflows = async (
               primaryEmail: '{{6e089bc9-aabd-435f-865f-f31c01c8f4a7.email}}',
               additionalEmails: [],
             },
+            jobTitle: '{{6e089bc9-aabd-435f-865f-f31c01c8f4a7.jobTitle}}',
             companyId: '{{0715b6cd-7cc1-4b98-971b-00f54dfe643b.id}}',
           },
         },
@@ -461,7 +460,7 @@ export const prefillWorkflows = async (
           }),
         },
         errorHandlingOptions: {
-          retryOnFailure: { value: false },
+          retryOnFailure: { value: 0 },
           continueOnFailure: { value: false },
         },
       },
@@ -497,7 +496,7 @@ export const prefillWorkflows = async (
         },
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -541,7 +540,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -585,7 +584,7 @@ export const prefillWorkflows = async (
         },
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -633,7 +632,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -676,7 +675,7 @@ export const prefillWorkflows = async (
         },
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -731,7 +730,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -761,7 +760,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -794,7 +793,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -825,7 +824,7 @@ export const prefillWorkflows = async (
         outputSchema: {},
         errorHandlingOptions: {
           retryOnFailure: {
-            value: false,
+            value: 0,
           },
           continueOnFailure: {
             value: false,
@@ -887,6 +886,8 @@ export const prefillWorkflows = async (
       'steps',
       'status',
       'workflowId',
+      'coreWorkflowId',
+      'workspaceWorkflowVersionId',
     ])
     .orIgnore()
     .values([
@@ -899,6 +900,8 @@ export const prefillWorkflows = async (
         steps: JSON.parse(quickLeadSteps),
         status: 'ACTIVE',
         workflowId: quickLeadWorkflowId,
+        coreWorkflowId: coreQuickLeadWorkflowId,
+        workspaceWorkflowVersionId: quickLeadWorkflowVersionId,
       },
       {
         id: coreCreateCompanyWorkflowVersionId,
@@ -909,6 +912,8 @@ export const prefillWorkflows = async (
         steps: JSON.parse(createCompanySteps),
         status: 'ACTIVE',
         workflowId: createCompanyWorkflowId,
+        coreWorkflowId: coreCreateCompanyWorkflowId,
+        workspaceWorkflowVersionId: createCompanyWorkflowVersionId,
       },
     ])
     .execute();

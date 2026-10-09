@@ -1,9 +1,9 @@
 import { CommandMenuItem } from '@/command-menu/components/CommandMenuItem';
 import { CommandMenuItemDropdown } from '@/command-menu/components/CommandMenuItemDropdown';
 import { CommandMenuItemNumberInput } from '@/command-menu/components/CommandMenuItemNumberInput';
-import { CommandMenuItemToggle } from '@/command-menu/components/CommandMenuItemToggle';
+import { CommandMenuItemSwitch } from '@/command-menu/components/CommandMenuItemSwitch';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { useCurrentPageLayoutOrThrow } from '@/page-layout/hooks/useCurrentPageLayoutOrThrow';
+import { pageLayoutDraftComponentState } from '@/page-layout/states/pageLayoutDraftComponentState';
 import { useRecordTableWidgetFieldCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetFieldCallbacks';
 import { useRecordTableWidgetLayoutCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetLayoutCallbacks';
 import { useRecordTableWidgetViewForDisplay } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetViewForDisplay';
@@ -24,13 +24,14 @@ import { RecordTableCalendarFieldDropdownContent } from '@/side-panel/pages/page
 import { RecordTableCalendarLayoutDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableCalendarLayoutDropdownContent';
 import { RecordTableLayoutDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableLayoutDropdownContent';
 import { WidgetSettingsFooter } from '@/side-panel/pages/page-layout/components/WidgetSettingsFooter';
-import { usePageLayoutIdFromContextStore } from '@/side-panel/pages/page-layout/hooks/usePageLayoutIdFromContextStore';
+import { usePageLayoutSidePanelTarget } from '@/side-panel/pages/page-layout/hooks/usePageLayoutSidePanelTarget';
 import { useRecordTableSettingsDescriptions } from '@/side-panel/pages/page-layout/hooks/useRecordTableSettingsDescriptions';
 import { useUpdateCurrentWidgetConfig } from '@/side-panel/pages/page-layout/hooks/useUpdateCurrentWidgetConfig';
 import { useWidgetInEditMode } from '@/side-panel/pages/page-layout/hooks/useWidgetInEditMode';
 import { SidePanelSubPages } from '@/side-panel/types/SidePanelSubPages';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
@@ -68,8 +69,11 @@ const StyledSettingsContainer = styled.div`
 export const SidePanelDashboardRecordTableSettings = () => {
   const { t } = useLingui();
 
-  const { pageLayoutId } = usePageLayoutIdFromContextStore();
-  const { currentPageLayout } = useCurrentPageLayoutOrThrow();
+  const { pageLayoutId } = usePageLayoutSidePanelTarget();
+  const pageLayoutDraft = useAtomComponentStateValue(
+    pageLayoutDraftComponentState,
+    pageLayoutId,
+  );
   const { widgetInEditMode } = useWidgetInEditMode(pageLayoutId);
   const { navigateToSidePanelSubPage } = useSidePanelSubPageHistory();
 
@@ -95,7 +99,7 @@ export const SidePanelDashboardRecordTableSettings = () => {
 
   const isUIEditable = getRecordTableWidgetIsUIEditable(
     configuration,
-    currentPageLayout.type,
+    pageLayoutDraft.type,
   );
 
   const {
@@ -244,9 +248,9 @@ export const SidePanelDashboardRecordTableSettings = () => {
                   id="record-table-source"
                   dropdownId="record-table-source"
                   dropdownComponents={
-                    <DropdownContent>
+                    <LegacyDropdownContent>
                       <RecordTableDataSourceDropdownContent />
-                    </DropdownContent>
+                    </LegacyDropdownContent>
                   }
                   dropdownPlacement="bottom-end"
                   hasSubMenu
@@ -262,14 +266,14 @@ export const SidePanelDashboardRecordTableSettings = () => {
                   dropdownId="object-view-layout"
                   dropdownComponents={
                     hasViewId ? (
-                      <DropdownContent>
+                      <LegacyDropdownContent>
                         <RecordTableLayoutDropdownContent
                           pageLayoutId={pageLayoutId}
                           widgetId={widgetInEditMode.id}
                           objectMetadataId={widgetInEditMode.objectMetadataId!}
                           currentLayoutViewType={currentLayoutViewType}
                         />
-                      </DropdownContent>
+                      </LegacyDropdownContent>
                     ) : (
                       <></>
                     )
@@ -339,7 +343,7 @@ export const SidePanelDashboardRecordTableSettings = () => {
                         id="record-table-calendar-field"
                         dropdownId="record-table-calendar-field"
                         dropdownComponents={
-                          <DropdownContent>
+                          <LegacyDropdownContent>
                             <RecordTableCalendarFieldDropdownContent
                               pageLayoutId={pageLayoutId}
                               widgetId={widgetInEditMode.id}
@@ -350,7 +354,7 @@ export const SidePanelDashboardRecordTableSettings = () => {
                                 calendarFieldMetadataId
                               }
                             />
-                          </DropdownContent>
+                          </LegacyDropdownContent>
                         }
                         dropdownPlacement="bottom-end"
                         hasSubMenu
@@ -367,13 +371,13 @@ export const SidePanelDashboardRecordTableSettings = () => {
                         id="record-table-calendar-layout"
                         dropdownId="record-table-calendar-layout"
                         dropdownComponents={
-                          <DropdownContent>
+                          <LegacyDropdownContent>
                             <RecordTableCalendarLayoutDropdownContent
                               pageLayoutId={pageLayoutId}
                               widgetId={widgetInEditMode.id}
                               currentCalendarLayout={currentCalendarLayout}
                             />
-                          </DropdownContent>
+                          </LegacyDropdownContent>
                         }
                         dropdownPlacement="bottom-end"
                         hasSubMenu
@@ -390,7 +394,7 @@ export const SidePanelDashboardRecordTableSettings = () => {
                         id="record-table-group-by"
                         dropdownId="record-table-group-by"
                         dropdownComponents={
-                          <DropdownContent>
+                          <LegacyDropdownContent>
                             <RecordTableGroupByDropdownContent
                               pageLayoutId={pageLayoutId}
                               widgetId={widgetInEditMode.id}
@@ -402,7 +406,7 @@ export const SidePanelDashboardRecordTableSettings = () => {
                               }
                               isClearable={!isKanbanLayout}
                             />
-                          </DropdownContent>
+                          </LegacyDropdownContent>
                         }
                         dropdownPlacement="bottom-end"
                         hasSubMenu
@@ -413,12 +417,12 @@ export const SidePanelDashboardRecordTableSettings = () => {
                   )}
                   {!isCalendarLayout && hasGroupBy && (
                     <SelectableListItem itemId="record-table-hide-empty-groups">
-                      <CommandMenuItemToggle
+                      <CommandMenuItemSwitch
                         LeftIcon={IconEyeOff}
                         text={t`Hide empty groups`}
                         id="record-table-hide-empty-groups"
-                        toggled={shouldHideEmptyGroups}
-                        onToggleChange={handleShouldHideEmptyGroupsChange}
+                        checked={shouldHideEmptyGroups}
+                        onCheckedChange={handleShouldHideEmptyGroupsChange}
                       />
                     </SelectableListItem>
                   )}
@@ -436,12 +440,12 @@ export const SidePanelDashboardRecordTableSettings = () => {
                   )}
                   {isWidgetContentEditingSupported && (
                     <SelectableListItem itemId="record-table-allow-editing">
-                      <CommandMenuItemToggle
+                      <CommandMenuItemSwitch
                         LeftIcon={IconPencil}
                         text={t`Allow editing`}
                         id="record-table-allow-editing"
-                        toggled={isUIEditable}
-                        onToggleChange={handleIsUIEditableChange}
+                        checked={isUIEditable}
+                        onCheckedChange={handleIsUIEditableChange}
                       />
                     </SelectableListItem>
                   )}

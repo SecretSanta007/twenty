@@ -14,6 +14,7 @@ export { IconBrandAnthropic } from './components/IconBrandAnthropic';
 export { IconBrandGemini } from './components/IconBrandGemini';
 export { IconBrandGroq } from './components/IconBrandGroq';
 export { IconBrandMistral } from './components/IconBrandMistral';
+export { IconBrandTypesafeAi } from './components/IconBrandTypesafeAi';
 export { IconBrandXai } from './components/IconBrandXai';
 export { IconChartBarHorizontal } from './components/IconChartBarHorizontal';
 export { IconGmail } from './components/IconGmail';
@@ -87,6 +88,7 @@ export {
   IconBadge2k,
   IconBaselineDensitySmall,
   IconBell,
+  IconBellOff,
   IconBlockquote,
   IconBold,
   IconBolt,
@@ -298,6 +300,7 @@ export {
   IconId,
   IconInbox,
   IconInfoCircle,
+  IconInfoSquareRounded,
   IconItalic,
   IconJetpack,
   IconJson,
@@ -345,6 +348,7 @@ export {
   IconMessage,
   IconMessageCirclePlus,
   IconMicrophone,
+  IconMinimize,
   IconMinus,
   IconMoneybag,
   IconMoodSmile,
@@ -417,6 +421,7 @@ export {
   IconSettingsAutomation,
   IconSettingsBolt,
   IconShare,
+  IconShare2,
   IconShield,
   IconShoppingBag,
   IconSitemap,
@@ -449,6 +454,7 @@ export {
   IconSquareRoundedX,
   IconSquareX,
   IconStack2,
+  IconStairs,
   IconStar,
   IconStatusChange,
   IconStepInto,
@@ -482,6 +488,7 @@ export {
   IconUnlink,
   IconUpload,
   IconUser,
+  IconUserOff,
   IconUserCircle,
   IconUserCog,
   IconUserPin,
@@ -498,6 +505,8 @@ export {
   IconWorld,
   IconWorldWww,
   IconX,
+  IconZzz,
+  IconZzzOff,
 } from './components/TablerIcons';
 export { ThinkingOrbitLoaderIcon } from './components/ThinkingOrbitLoaderIcon';
 export type {

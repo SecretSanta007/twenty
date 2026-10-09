@@ -1,3 +1,4 @@
+import { type ApplicationDisplayData } from '@/applications/types/ApplicationDisplayData';
 import { getLogicFunctionTriggerLabel } from '@/logic-functions/utils/getLogicFunctionTriggerLabel';
 import { useComputeApplicationContentForLayoutAndLogic } from '@/settings/applications/hooks/useComputeApplicationContentForLayoutAndLogic';
 import { useComputeObjectAndFieldsContentForApplication } from '@/settings/applications/hooks/useComputeObjectAndFieldsContentForApplication';
@@ -7,23 +8,19 @@ import { useState } from 'react';
 import { type Manifest } from 'twenty-shared/application';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { H2Title } from 'twenty-ui/typography';
-import { SearchInput } from 'twenty-ui/input';
-import { Section } from 'twenty-ui/layout';
-import { type ApplicationDisplayData } from '@/applications/types/applicationDisplayData.type';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
 import { type Application } from '~/generated-metadata/graphql';
-import {
-  type ApplicationContentRow,
-  SettingsApplicationContentSubtable,
-} from '~/pages/settings/applications/components/SettingsApplicationContentSubtable';
+import { SettingsApplicationContentSubtable } from '~/pages/settings/applications/components/SettingsApplicationContentSubtable';
+import { type ApplicationContentRow } from '@/settings/applications/types/ApplicationContentRow';
 import { useInstalledTimelineActivityTypes } from '~/pages/settings/applications/hooks/useInstalledTimelineActivityTypes';
-import { getSettingsApplicationTimelineActivityTypes } from '~/pages/settings/applications/utils/getSettingsApplicationTimelineActivityTypes';
 import { filterSettingsApplicationTimelineActivityTypes } from '~/pages/settings/applications/utils/filterSettingsApplicationTimelineActivityTypes';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { getSettingsApplicationTimelineActivityTypes } from '~/pages/settings/applications/utils/getSettingsApplicationTimelineActivityTypes';
+import { normalizeSearchText } from 'twenty-ui/utilities';
 
 type InstalledApplicationForContentTab = Omit<
   Application,
-  'objects' | 'frontComponents' | 'commandMenuItems'
+  'objects' | 'frontComponents' | 'commandMenuItems' | 'settingsMenuItems'
 > & {
   objects: { id: string }[];
   frontComponents?: {
@@ -223,17 +220,17 @@ export const SettingsApplicationDetailContentTab = ({
 
   return (
     <>
-      <Section>
+      <Section.Root>
         <SearchInput
           placeholder={t`Search...`}
           value={searchTerm}
-          onChange={setSearchTerm}
+          onValueChange={setSearchTerm}
         />
-      </Section>
+      </Section.Root>
 
       {hasData && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Data`}
             description={t`Schema this app contributes to your workspace`}
           />
@@ -251,12 +248,12 @@ export const SettingsApplicationDetailContentTab = ({
               fallbackApplicationData={fallbackApplicationData}
             />
           </Table>
-        </Section>
+        </Section.Root>
       )}
 
       {hasLayout && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Layout`}
             description={t`How records, pages, and navigation are displayed`}
           />
@@ -292,12 +289,12 @@ export const SettingsApplicationDetailContentTab = ({
               fallbackApplicationData={fallbackApplicationData}
             />
           </Table>
-        </Section>
+        </Section.Root>
       )}
 
       {hasLogic && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Logic`}
             description={t`Automation, AI, and access this app provides`}
           />
@@ -339,7 +336,7 @@ export const SettingsApplicationDetailContentTab = ({
               fallbackApplicationData={fallbackApplicationData}
             />
           </Table>
-        </Section>
+        </Section.Root>
       )}
     </>
   );

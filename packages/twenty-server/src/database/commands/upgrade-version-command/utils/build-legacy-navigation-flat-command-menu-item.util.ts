@@ -59,16 +59,20 @@ export const buildLegacyNavigationFlatCommandMenuItem = ({
     isPinned: false,
     availabilityType: CommandMenuItemAvailabilityType.GLOBAL,
     conditionalAvailabilityExpression,
+    conditionalPinnedExpression: null,
     frontComponentId: null,
     frontComponentUniversalIdentifier: null,
     engineComponentKey: EngineComponentKey.NAVIGATION,
-    payload: { objectMetadataItemId: objectMetadata.id },
+    payload: {
+      objectMetadataItemId: objectMetadata.id,
+    } as unknown as FlatCommandMenuItem['payload'],
     navigationTargetObjectMetadataId: null,
     navigationTargetObjectMetadataUniversalIdentifier: null,
     hotKeys: isDefined(objectMetadata.shortcut)
       ? ['G', objectMetadata.shortcut]
       : null,
     workflowVersionId: null,
+    coreWorkflowVersionId: null,
     availabilityObjectMetadataId: null,
     availabilityObjectMetadataUniversalIdentifier: null,
     pageLayoutId: null,

@@ -20,8 +20,7 @@ export const RecordPageSidePanelPinnedCommandMenuItems = () => {
 
   const availableWidth = useSidePanelFooterPinnedItemsAvailableWidth();
 
-  // A widget that contributes footer actions, such as the email composer,
-  // supersedes the record's own actions rather than doubling up with them.
+  // Widget footer actions (e.g. the email composer) replace the record's own.
   const hasPinnedWidgetCommandMenuItems =
     sidePanelWidgetFooterCommandMenuItems.some(
       (commandMenuItem) => commandMenuItem.isPinned !== false,
@@ -36,7 +35,6 @@ export const RecordPageSidePanelPinnedCommandMenuItems = () => {
 
   return (
     <CommandMenuContextProvider
-      isInSidePanel={true}
       displayType="button"
       containerType={CommandMenuItemContainerType.SidePanelFooter}
     >
